@@ -114,7 +114,7 @@ class NewsletterParser:
             return topic, title
 
     def query_parser(self, query, domain_type):
-        """Parse query to get utm."""
+        """Parse query to get utms or maybe topics/title when it's redirect."""
         if domain_type == 'mojo_standard':
 
             if query == '':
@@ -122,10 +122,81 @@ class NewsletterParser:
 
             else:
                 mojo_utms = urllib.parse.parse_qs(query)
-                utm_campaign = mojo_utms['utm_campaign'][0].split('-')[0]
-                utm_medium = mojo_utms['utm_medium'][0]
-                utm_source = mojo_utms['utm_source'][0]
+                if 'utm_campaign' in mojo_utms.keys():
+                    utm_campaign = mojo_utms['utm_campaign'][0].split('-')[0]
+                else:
+                    utm_campaign = ''
+
+                if 'utm_medium' in mojo_utms.keys():
+                    utm_medium = mojo_utms['utm_medium'][0]
+                else:
+                    utm_medium = ''
+
+                if 'utm_source' in mojo_utms.keys():
+                    utm_source = mojo_utms['utm_source'][0]
+                else:
+                    utm_source = ''
             return utm_campaign, utm_medium, utm_source
+
+        if domain_type == 'others':
+
+            if query == '':
+                topic = ''
+                title = ''
+                utm_campaign = ''
+                utm_medium = ''
+                utm_source = ''
+                return topic, title, utm_campaign, utm_medium, utm_source
+
+            else:
+                others_utms = urllib.parse.parse_qs(query)
+                if 'u' in others_utms.keys():
+
+                    url_parts = urllib.parse.urlsplit(others_utms['u'][0])
+
+                    topic, title = self.path_parser(
+                                                 url_parts.path,
+                                                 domain_type='mojo_standard')
+                    utm_campaign, utm_medium, utm_source = self.query_parser(
+                                            url_parts.query,
+                                            domain_type='mojo_standard')
+
+                else:
+                    topic = ''
+                    title = ''
+                    utm_campaign = ''
+                    utm_medium = ''
+                    utm_source = ''
+
+                if 'url' in others_utms.keys():
+
+                    url_parts = urllib.parse.urlsplit(others_utms['url'][0])
+
+                    topic, title = self.path_parser(
+                                                 url_parts.path,
+                                                 domain_type='mojo_standard')
+
+                    utm_campaign, utm_medium, utm_source = self.query_parser(
+                                              url_parts.query,
+                                              domain_type='mojo_standard')
+
+                else:
+                    topic = ''
+                    title = ''
+                    utm_campaign = ''
+                    utm_medium = ''
+                    utm_source = ''
+
+                if 'utm_campaign' in others_utms.keys():
+                    utm_campaign = others_utms['utm_campaign'][0].split('-')[0]
+
+                if 'utm_medium' in others_utms.keys():
+                    utm_medium = others_utms['utm_medium'][0].split('-')[0]
+
+                if 'utm_source' in others_utms.keys():
+                    utm_source = others_utms['utm_source'][0].split('-')[0]
+
+                return topic, title, utm_campaign, utm_medium, utm_source
 
     def mojo_standard_parser(self, df,
                              selected_cols=['Email', 'Url', 'os', 'browser',
@@ -139,6 +210,18 @@ class NewsletterParser:
         mojo_standard['utm_campaign'], mojo_standard['utm_medium'], mojo_standard['utm_source'] = zip(*mojo_standard['query'].map(lambda x: self.query_parser(x, domain_type='mojo_standard')))
 
         return mojo_standard[selected_cols]
+
+    def others_parser(self, df,
+                      selected_cols=['Email', 'Url', 'os', 'browser',
+                                     'domain', 'domain_type', 'topic',
+                                     'title', 'utm_campaign',
+                                     'utm_medium', 'utm_source']):
+        """Parse mojo standard path and query to get key info."""
+        others = self.subset_urls_by_domain(df,
+                                            domain_type_wl=['others'])
+        others['topic'], others['title'], others['utm_campaign'], others['utm_medium'], others['utm_source'] = zip(*others['query'].map(lambda x: self.query_parser(x, domain_type='others')))
+
+        return others[selected_cols]
 
     def get_url_content(self, link):
         """Get content from the link."""
