@@ -1,27 +1,29 @@
 import os
 import pandas as pd
-#python3 -m pip install pandas
 import urllib.parse
 from ua_parser import user_agent_parser
-import requests
-from NewsletterParser import NewsletterParser
 
+from MojoNewsletterClicksParser import MojoNewsletterClicksParser
+
+# to display the whole column
 pd.set_option('display.max_colwidth', -1)
 
+# folder of the newsletter click csv files
 datafolder = '/home/centos/mojo/data/'
-
 datafiles = [os.path.join(datafolder, f) for f in os.listdir(datafolder)]
 
+# read all the csv into one data frame
 clean_df = []
 for f in datafiles:
       dat = pd.read_csv(f)
+      clean_df.append(dat)
 
-      nl = (url_df=dat)
-      nl.full_url_df = nl.extend_url_df(nl.url_df)
-      nl.cleaned_mojo_standard=nl.mojo_standard_parser(nl.full_url_df)
-      nl.cleaned_other=nl.others_parser(full_url_df)
+all_dat = pd.concat(clean_df)
 
-      clean_df.append(nl.cleaned_mojo_standard)
-      clean_df.append(nl.cleaned_other)
+nl = MojoNewsletterClicksParser(url_df=all_dat)
+full_url_df = nl.extend_url_df(nl.url_df)
+nl.cleaned_mojo_standard=nl.mojo_standard_parser(full_url_df)
+nl.cleaned_other=nl.others_parser(full_url_df)
 
-pd.concat(clean_df).to_csv('clean_data.csv')
+cleaned_dat = pd.concat([nl.cleaned_mojo_standard,nl.cleaned_other])
+cleaned_dat.to_csv('mojo_newsletter_cleaned_clicks.csv')
