@@ -43,12 +43,12 @@ def aggregate_sub_don(df,
     return new_df
 
 
-def combine_sub_don(sub,
-                    don,
-                    by_sub='email',
-                    by_don='email'):
-    """Combine subscription and donation."""
-    combined = sub.merge(don, left_on=by_sub, right_on=by_don, how='outer')
+def combine_dat_sets(dat1,
+                     dat2,
+                     by_dat1,
+                     by_dat2):
+    """Outer join two data sets."""
+    combined = dat1.merge(dat2, left_on=by_dat1, right_on=by_dat2, how='outer')
     combined.fillna(0, inplace=True)
     return combined
 
@@ -82,7 +82,7 @@ def sub_don_process(subsciption_filename,
                                           'EMAIL': 'Email'})
 
     # combine subscribers and donars
-    combined = combine_sub_don(subs, don, by_sub='Email', by_don='Email')
+    combined = combine_dat_sets(subs, don, 'Email', 'Email')
 
     return subscription, donation, combined
 
