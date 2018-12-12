@@ -5,6 +5,7 @@ It separates newsletter by source and parse urls and user agent data
 import urllib.parse
 from ua_parser import user_agent_parser
 import requests
+import pandas as pd
 
 
 class MojoNewsletterClicksParser:
@@ -222,14 +223,7 @@ class MojoNewsletterClicksParser:
                         utm_medium = ''
                         utm_source = ''
 
-                else:
-                    topic = ''
-                    title = ''
-                    utm_campaign = ''
-                    utm_medium = ''
-                    utm_source = ''
-
-                if 'url' in others_utms.keys():
+                elif 'url' in others_utms.keys():
 
                     url_parts = urllib.parse.urlsplit(others_utms['url'][0])
 
@@ -320,10 +314,10 @@ class MojoNewsletterClicksParser:
         # try to get topic and title from the non-standard clicks' path
         # assume the path parts that contains '-' are titles
         path_info = others['path'].map(
-            lambda x: nl.path_parser(
+            lambda x: self.path_parser(
                 x, domain_type='others'))
         query_info = others['query'].map(
-            lambda x: nl.query_parser(
+            lambda x: self.query_parser(
                 x, domain_type='others'))
 
         paths_query_combo = []
