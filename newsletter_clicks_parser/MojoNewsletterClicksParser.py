@@ -69,10 +69,17 @@ class MojoNewsletterClicksParser:
         print("""Add record date to the click data""")
         return df
 
+    def url_parser(self,url):
+        try:
+            splitresults = urllib.parse.urlsplit(url)
+        except Exception as err:
+            splitresults = urllib.parse.SplitResult(scheme = '', netloc ='', path='', query='', fragment='')
+        return splitresults
+
     def url_parse_and_extend(self, df, col_url='Url'):
         """Add the parts of parsed url to the data frame."""
         df['protocol'], df['domain'], df['path'], df['query'], df['fragment'] = zip(
-            *df[col_url].map(urllib.parse.urlsplit))
+            *df[col_url].map(self.url_parser))
         print("""Add protocol, domain, path, query and fragment
                   to the click data""")
         return df
