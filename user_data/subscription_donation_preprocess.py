@@ -10,30 +10,21 @@ import datetime
 # to show the whole content in the columns
 pd.set_option('display.max_colwidth', -1)
 
-subsciption_filename = '/home/centos/mojo/data/subscriptions.xlsx'
-donation_filename = '/home/centos/mojo/data/donations_combined.xlsx'
-
-
 def calculate_recency(dates):
     """Calculate the recency."""
+    dates = pd.to_datetime(dates)
     return (datetime.date.today() - dates).astype('timedelta64[D]').astype(int).min()
 
 def calculate_trans_range(dates):
     """Calculate the date range between the first and last transaction."""
+    dates = pd.to_datetime(dates)
     return (dates.max() - dates.min()).days
 
 
 def aggregate_sub_don(df,
-                      groupby_col='EMAIL',
-                      aggs_methods={'ORD ENTR DT': ['count',
-                                                    calculate_recency,
-                                                    calculate_trans_range],
-                                    'ORD REMT': ['sum']},
-                      new_colnames={'ORD ENTR DT_count': 'subs_freq',
-                                    'ORD ENTR DT_calculate_recency': 'subs_recency',
-                                    'ORD ENTR DT_calculate_trans_range': 'subs_range',
-                                    'ORD REMT_sum': 'subs_total',
-                                    'Email': 'email'}):
+                      groupby_col,
+                      aggs_methods,
+                      new_colnames):
     """
     Aggregate subscriptions/donations.
 
@@ -46,6 +37,7 @@ def aggregate_sub_don(df,
     new_df = new_df.reset_index()
 
     new_df.rename(columns=new_colnames, inplace=True)
+
     return new_df
 
 def reshape_data_to_wide( df, 
@@ -76,60 +68,90 @@ def combine_dat_sets(dat1,
     return combined
 
 
-def sub_don_process(subsciption_filename,
-                    donation_filename):
+def sub_don_process(subscription_filenames,
+                    donation_filenames,
+                    column_names = {'email':'EMAIL',
+                                    'amount':'ORD REMT',
+                                    'date': 'ORD ENTR DT',
+                                    'pubcode':'ORD-PUB-CODE'}                  
+                   
+                   ):
     """Main function to preprocess subscription and donation."""
-    subscription = pd.read_excel(subsciption_filename)
-    donation = pd.read_excel(donation_filename)
 
+    if isinstance(subscription_filenames, list):
+        # if inputs are list of file names, read the files as data frame
+        subscription_df = []
+        for f in subscription_filenames:
+            if '.csv' in f:
+                dat = pd.read_csv(f,encoding = "ISO-8859-1")
+            if '.xlsx' in f:
+                dat = pd.read_excel(f)
+            subscription_df.append(dat)
+        subscription = pd.concat(subscription_df)
+
+        donation_df = []
+        for f in donation_filenames:
+            if '.csv' in f:
+                dat = pd.read_csv(f,encoding = "ISO-8859-1")
+            if '.xlsx' in f:
+                dat = pd.read_excel(f)
+            donation_df.append(dat)
+        donation = pd.concat(donation_df)
+
+    if isinstance(subscription_filenames, pd.DataFrame):       
+        # if inputs are data frame, use them as they are
+        subscription = subscription_filenames
+        donation = donation_filenames
+        
     # aggregate subscription data
     subs = aggregate_sub_don(subscription,
-                             groupby_col='EMAIL',
-                             aggs_methods={'ORD ENTR DT': ['count',
+                             groupby_col=column_names['email'],
+                             aggs_methods={column_names['date']: ['count',
                                                            calculate_recency,
                                                            calculate_trans_range],
-                                           'ORD REMT': ['sum']},
-                             new_colnames={'ORD ENTR DT_count': 'subs_freq',
-                                           'ORD ENTR DT_calculate_recency': 'subs_recency',
-                                           'ORD ENTR DT_calculate_trans_range': 'subs_range',
-                                           'ORD REMT_sum': 'subs_total',
-                                           'EMAIL': 'Email'})
+                                           column_names['amount']: ['sum']},
+                             new_colnames={column_names['date']+'_count': 'subs_freq',
+                                           column_names['date']+'_calculate_recency': 'subs_recency',
+                                           column_names['date']+'_calculate_trans_range': 'subs_range',
+                                           column_names['amount'] + '_sum': 'subs_total',
+                                           column_names['email']: 'Email'})
     # aggregate donation data
     don = aggregate_sub_don(donation,
-                            groupby_col='EMAIL',
-                            aggs_methods={'ORD ENTR DT': ['count',
+                            groupby_col=column_names['email'],
+                            aggs_methods={column_names['date']: ['count',
                                                           calculate_recency,
                                                           calculate_trans_range],
-                                          'ORD REMT': ['sum']},
-                            new_colnames={'ORD ENTR DT_count': 'don_freq',
-                                          'ORD ENTR DT_calculate_recency': 'don_recency',
-                                          'ORD ENTR DT_calculate_trans_range': 'don_range',
-                                          'ORD REMT_sum': 'don_total',
-                                          'EMAIL': 'Email'})
+                                          column_names['amount']: ['sum']},
+                            new_colnames={column_names['date']+'_count': 'don_freq',
+                                          column_names['date']+'_calculate_recency': 'don_recency',
+                                          column_names['date']+'_calculate_trans_range': 'don_range',
+                                          column_names['amount']+'_sum': 'don_total',
+                                          column_names['email']: 'Email'})
     # combine subscribers and donars
     combined = combine_dat_sets(subs, don, 'Email', 'Email')
     
     # convert ORD PUB CODE to wide forward since some emails have two pub codes
     # combine donation and subscription pub code
-    don_uniques = donation[['EMAIL', 'ORD-PUB-CODE']].drop_duplicates()
+          
+    don_uniques = donation[[column_names['email'], column_names['pubcode']]].drop_duplicates()
     don_uniques['VALUE'] = 1
-    don_pub = don_uniques.pivot(index= 'EMAIL',columns = 'ORD-PUB-CODE', values = 'VALUE')
+    don_pub = don_uniques.pivot(index= column_names['email'],columns = column_names['pubcode'], values = 'VALUE')
     don_pub = don_pub.reset_index()
     
-    sub_uniques = subscription[['EMAIL', 'ORD-PUB-CODE']].drop_duplicates()
+    sub_uniques = subscription[[column_names['email'], column_names['pubcode']]].drop_duplicates()
     sub_uniques['VALUE'] = 1
-    sub_pub = sub_uniques.pivot(index= 'EMAIL',columns = 'ORD-PUB-CODE', values = 'VALUE')
+    sub_pub = sub_uniques.pivot(index= column_names['email'],columns = column_names['pubcode'], values = 'VALUE')
     sub_pub = sub_pub.reset_index()
     
-    don_sub_pub_combo = combine_dat_sets(sub_pub, don_pub, 'EMAIL', 'EMAIL')
-    don_sub_pub_combo.rename(columns = {'EMAIL': 'Email'}, inplace=True)
+    don_sub_pub_combo = combine_dat_sets(sub_pub, don_pub, column_names['email'], column_names['email'])
+    don_sub_pub_combo.rename(columns = {column_names['email']: 'Email'}, inplace=True)
     
     final_combo = combine_dat_sets(combined, don_sub_pub_combo, 'Email', 'Email')
-    
+    final_combo['process_date'] = datetime.date.today()
     return subscription, donation, final_combo
 
 if __name__ == "__main__":
     # run aggregation and return raw subscription data, raw donation data
     # and combined processed data
-    subscription, donation, combined = sub_don_process(subsciption_filename,
-                                                       donation_filename)
+    subscription, donation, combined = sub_don_process(subsciption_filenames,
+                                                       donation_filenames)
