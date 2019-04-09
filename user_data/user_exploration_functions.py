@@ -102,11 +102,16 @@ def find_most_popular_titles(df, emails, topN = 10):
     return topN_urls
 
 
+<<<<<<< HEAD
 
 ## register on plot.ly to get user name and api_key
 # https://plot.ly/python/choropleth-maps/
 #import plotly 
 #plotly.tools.set_credentials_file(username='xxx', api_key='xxxx')
+=======
+#import plotly 
+#plotly.tools.set_credentials_file(username='holmesaaa', api_key='cNgKGTwzCSAnXS4kJ8z5')
+>>>>>>> 75963bf07e2623d1c4dc1b2a1bb2be0b20ad604d
 import plotly.plotly as py
 import pandas as pd
 
@@ -227,4 +232,8 @@ def cal_nclicks_by_modeling_topics_percentile(topic_filename, raw_click_data, pr
     raw_click_data_topics  = raw_click_data.merge(top_values, how = 'inner', left_on= 'title', right_on ='post_name').fillna(0)
     nclicks_raw_click_data_topics =raw_click_data_topics.groupby('Email')[topics].sum(axis=1)
     nclicks_raw_click_data_topics  = nclicks_raw_click_data_topics.reset_index()
+<<<<<<< HEAD
     return nclicks_raw_click_data_topics
+=======
+    return nclicks_raw_click_data_topics
+>>>>>>> 75963bf07e2623d1c4dc1b2a1bb2be0b20ad604d
